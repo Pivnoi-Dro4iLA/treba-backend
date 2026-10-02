@@ -6,6 +6,8 @@ using Application.ProductImages;
 using Application.Products;
 using Application.ProductTags;
 using Application.ProductVariants;
+using Application.Sellers;
+using Application.Stores;
 using Infrastructure;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +34,8 @@ builder.Services.AddScoped<IProductVariantService, ProductVariantService>();
 builder.Services.AddScoped<IProductImageService, ProductImageService>();
 builder.Services.AddScoped<IProductAttributeValueService, ProductAttributeValueService>();
 builder.Services.AddScoped<IProductTagService, ProductTagService>();
+builder.Services.AddScoped<ISellerService, SellerService>();
+builder.Services.AddScoped<IStoreService, StoreService>();
 
 var app = builder.Build();
 

@@ -1,4 +1,5 @@
-﻿using Domain.Entities.Product;
+﻿using Domain.Entities;
+using Domain.Entities.Product;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -17,6 +18,11 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.Id)
                 .ValueGeneratedNever();
+
+            builder.HasOne<Store>()
+                .WithMany()
+                .HasForeignKey(x => x.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Property(x => x.StoreId)
                 .IsRequired();

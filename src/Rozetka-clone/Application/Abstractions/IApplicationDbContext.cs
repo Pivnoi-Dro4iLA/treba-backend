@@ -40,6 +40,9 @@ namespace Application.Abstractions
 
         DbSet<ProductAttributeValue> ProductAttributeValues { get; }
 
+        DbSet<Seller> Sellers { get; }
+        DbSet<Store> Stores { get; }
+
         Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default);
 
