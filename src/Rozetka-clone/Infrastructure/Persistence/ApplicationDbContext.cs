@@ -18,7 +18,6 @@ namespace Infrastructure.Persistence
         {
         }
 
-        // Users
         public DbSet<User> Users => Set<User>();
 
         public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -29,7 +28,6 @@ namespace Infrastructure.Persistence
 
         public DbSet<Permission> Permissions => Set<Permission>();
 
-        // Products
         public DbSet<Product> Products => Set<Product>();
 
         public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
@@ -46,11 +44,12 @@ namespace Infrastructure.Persistence
 
         public DbSet<AttributeOption> AttributeOptions => Set<AttributeOption>();
 
-        public DbSet<ProductAttributeValue> ProductAttributeValues =>
-            Set<ProductAttributeValue>();
+        public DbSet<Seller> Sellers => Set<Seller>();
+        public DbSet<Store> Stores => Set<Store>();
 
-        public DbSet<ProductTagRelation> ProductTagRelations =>
-            Set<ProductTagRelation>();
+        public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
+
+        public DbSet<ProductTagRelation> ProductTagRelations => Set<ProductTagRelation>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
