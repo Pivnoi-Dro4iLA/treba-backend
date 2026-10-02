@@ -47,6 +47,10 @@ namespace Infrastructure.Persistence
         public DbSet<Seller> Sellers => Set<Seller>();
         public DbSet<Store> Stores => Set<Store>();
 
+        public DbSet<Cart> Carts => Set<Cart>();
+
+        public DbSet<CartItem> CartItems => Set<CartItem>();
+
         public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
 
         public DbSet<ProductTagRelation> ProductTagRelations => Set<ProductTagRelation>();

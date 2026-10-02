@@ -43,6 +43,10 @@ namespace Application.Abstractions
         DbSet<Seller> Sellers { get; }
         DbSet<Store> Stores { get; }
 
+        DbSet<Cart> Carts { get; }
+
+        DbSet<CartItem> CartItems { get; }
+
         Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default);
 
