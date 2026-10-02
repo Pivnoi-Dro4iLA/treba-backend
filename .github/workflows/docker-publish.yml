@@ -39,10 +39,20 @@ jobs:
           docker run -d --name treba-backend-test \
             -p 5050:5000 \
             -e ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=test;Username=test;Password=test" \
+            -e Jwt__SecretKey="${{ secrets.JWT_SECRET_KEY }}" \
             $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
           sleep 5
-          curl -fsS http://localhost:5050/WeatherForecast >/dev/null
+
+          echo "=== Docker containers ==="
+          docker ps -a
+
+          echo "=== Backend container logs ==="
+          docker logs treba-backend-test
+
+          echo "=== Smoke test ==="
+          curl -fsS http://localhost:5050/ping >/dev/null
+
           docker rm -f treba-backend-test
 
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest

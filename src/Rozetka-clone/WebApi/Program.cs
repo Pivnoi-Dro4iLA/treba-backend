@@ -1,3 +1,4 @@
+using System.Text;
 using Application.Attributes;
 using Application.Brands;
 using Application.Categories;
@@ -10,21 +11,18 @@ using Application.Sellers;
 using Application.Stores;
 using Infrastructure;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using WebApi.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
 
-// OpenAPI
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerDocumentation();
 
-// Infrastructure
-// PostgreSQL + DbContext + IApplicationDbContext
-builder.Services.AddInfrastructure(
-    builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -37,7 +35,47 @@ builder.Services.AddScoped<IProductTagService, ProductTagService>();
 builder.Services.AddScoped<ISellerService, SellerService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
 
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var secretKey = jwtSection["SecretKey"]
+    ?? throw new InvalidOperationException("JWT SecretKey is missing from configuration.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSection["Issuer"],
+        ValidAudience = jwtSection["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+try
+{
+    await app.Services.SeedRolesAsync();
+    app.Logger.LogInformation("System roles seed completed successfully.");
+}
+catch (Exception exception)
+{
+    app.Logger.LogWarning(
+        exception,
+        "Roles could not be seeded because the database is unavailable.");
+}
 
 if (app.Environment.IsDevelopment() &&
     builder.Configuration.GetValue<bool>("SeedDemoUsers"))
@@ -58,14 +96,14 @@ if (app.Environment.IsDevelopment() &&
     }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwaggerDocumentation();
 }
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", async (
@@ -84,6 +122,13 @@ app.MapGet("/health", async (
             statusCode: StatusCodes.Status503ServiceUnavailable,
             title: "Database unavailable");
 });
+
+// Lightweight endpoint for Docker/CI smoke tests.
+// Does not require a database connection.
+app.MapGet("/ping", () => Results.Ok(new
+{
+    status = "ok"
+}));
 
 app.MapControllers();
 
