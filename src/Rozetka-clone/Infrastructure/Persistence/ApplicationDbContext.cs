@@ -5,6 +5,7 @@ using Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
 using Domain.Entities.Attribute;
+using Domain.Entities.Inventory;
 using DomainAttribute = Domain.Entities.Attribute.Attribute;
 
 namespace Infrastructure.Persistence
@@ -54,6 +55,14 @@ namespace Infrastructure.Persistence
         public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
 
         public DbSet<ProductTagRelation> ProductTagRelations => Set<ProductTagRelation>();
+        
+        public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+        
+        public DbSet<Domain.Entities.Inventory.Inventory> Inventory => Set<Domain.Entities.Inventory.Inventory>();
+        
+        public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+        
+        public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
