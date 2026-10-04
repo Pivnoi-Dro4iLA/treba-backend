@@ -70,6 +70,11 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.RefreshTokenExpiryTime);
 
+            builder.Property(x => x.AuthenticatorEnabled).IsRequired();
+            builder.Property(x => x.AuthenticatorSecretProtected).HasMaxLength(1000);
+            builder.Property(x => x.AuthenticatorEnabledAt);
+            builder.Property(x => x.EmailTwoFactorEnabled).IsRequired();
+
             builder.HasOne(x => x.Role)
                 .WithMany()
                 .HasForeignKey(x => x.RoleId)

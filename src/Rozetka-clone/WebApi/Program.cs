@@ -19,6 +19,10 @@ using WebApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddScoped<Application.Catalog.CatalogService>();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<WebApi.Errors.ApiExceptionHandler>();
+
 builder.Services.AddControllers();
 
 builder.Services.AddSwaggerDocumentation();
@@ -38,8 +42,6 @@ builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ICartService, CartService>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSection["SecretKey"]
-    ?? throw new InvalidOperationException("JWT SecretKey is missing from configuration.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -48,6 +50,10 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var secretKey = jwtSection["SecretKey"]
+        ?? throw new InvalidOperationException("JWT SecretKey is missing from configuration.");
+    if (Encoding.UTF8.GetByteCount(secretKey) < 32)
+        throw new InvalidOperationException("JWT SecretKey must be at least 32 bytes.");
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
@@ -61,11 +67,31 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var idClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(idClaim, out var id)) { context.Fail("Invalid user."); return; }
+            var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+            var user = await db.Users.AsNoTracking().Include(u => u.Role).SingleOrDefaultAsync(u => u.Id == id, context.HttpContext.RequestAborted);
+            if (user is null || user.Status is Domain.Entities.Users.UserStatus.Blocked or Domain.Entities.Users.UserStatus.Deleted
+                || user.Role?.Name != context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                context.Fail("Account is unavailable or role has changed.");
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+}
 
 try
 {
@@ -79,32 +105,17 @@ catch (Exception exception)
         "Roles could not be seeded because the database is unavailable.");
 }
 
-if (app.Environment.IsDevelopment() &&
-    builder.Configuration.GetValue<bool>("SeedDemoUsers"))
-{
-    try
-    {
-        var createdUsers = await app.Services.SeedDemoUsersAsync();
-
-        app.Logger.LogInformation(
-            "Demo user seed completed. Created entities: {CreatedUsers}.",
-            createdUsers);
-    }
-    catch (Exception exception)
-    {
-        app.Logger.LogWarning(
-            exception,
-            "Demo users could not be created because the database is unavailable.");
-    }
-}
+await app.Services.SeedAdministratorAsync(builder.Configuration);
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerDocumentation();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 

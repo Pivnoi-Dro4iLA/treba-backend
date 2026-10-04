@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities.Product;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -78,9 +79,9 @@ namespace Application.ProductVariants
                 .AnyAsync(x => x.Id == productId, cancellationToken);
 
             if (!productExists)
-                throw new InvalidOperationException("Product not found.");
+                throw new BusinessRuleException("Product not found.");
 
-            var sku = request.Sku.Trim();
+            var sku = request.Sku.Trim().ToUpperInvariant();
             var name = request.Name.Trim();
 
             if (string.IsNullOrWhiteSpace(sku))
@@ -92,10 +93,10 @@ namespace Application.ProductVariants
             ValidatePrice(request.Price, request.OldPrice);
 
             var skuExists = await _dbContext.ProductVariants
-                .AnyAsync(x => x.Sku == sku, cancellationToken);
+                .AnyAsync(x => x.Sku.ToUpper() == sku, cancellationToken);
 
             if (skuExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Product variant with SKU '{sku}' already exists.");
 
             var variant = new ProductVariant(
@@ -151,7 +152,7 @@ namespace Application.ProductVariants
                         cancellationToken);
 
                 if (skuExists)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Product variant with SKU '{sku}' already exists.");
             }
 

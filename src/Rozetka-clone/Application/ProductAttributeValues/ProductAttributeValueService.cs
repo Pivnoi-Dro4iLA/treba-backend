@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -76,7 +77,7 @@ namespace Application.ProductAttributeValues
                     cancellationToken);
 
             if (!productExists)
-                throw new InvalidOperationException("Product not found.");
+                throw new BusinessRuleException("Product not found.");
 
             await ValidateVariantAsync(
                 productId,
@@ -90,7 +91,7 @@ namespace Application.ProductAttributeValues
                     cancellationToken);
 
             if (attribute is null)
-                throw new InvalidOperationException("Attribute not found.");
+                throw new BusinessRuleException("Attribute not found.");
 
             await ValidateValueAsync(
                 attribute.Type,
@@ -150,7 +151,7 @@ namespace Application.ProductAttributeValues
                     cancellationToken);
 
             if (attribute is null)
-                throw new InvalidOperationException("Attribute not found.");
+                throw new BusinessRuleException("Attribute not found.");
 
             var optionId = request.OptionId ?? value.OptionId;
             var stringValue = request.StringValue ?? value.StringValue;
@@ -215,7 +216,7 @@ namespace Application.ProductAttributeValues
 
             if (!exists)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Product variant not found or does not belong to this product.");
             }
         }
@@ -299,7 +300,7 @@ namespace Application.ProductAttributeValues
 
                     if (!optionExists)
                     {
-                        throw new InvalidOperationException(
+                        throw new BusinessRuleException(
                             "Attribute option not found or does not belong to this attribute.");
                     }
 

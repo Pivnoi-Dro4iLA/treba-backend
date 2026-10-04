@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities.Product;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -71,7 +72,7 @@ namespace Application.ProductImages
                     cancellationToken);
 
             if (!productExists)
-                throw new InvalidOperationException("Product not found.");
+                throw new BusinessRuleException("Product not found.");
 
             await ValidateVariantAsync(
                 productId,
@@ -205,7 +206,7 @@ namespace Application.ProductImages
 
             if (!variantExists)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Product variant not found or does not belong to this product.");
             }
         }

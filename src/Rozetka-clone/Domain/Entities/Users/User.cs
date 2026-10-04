@@ -70,6 +70,14 @@ namespace Domain.Entities.Users
         
         public DateTimeOffset? RefreshTokenExpiryTime { get; private set; }
 
+        public bool AuthenticatorEnabled { get; private set; }
+
+        public string? AuthenticatorSecretProtected { get; private set; }
+
+        public DateTimeOffset? AuthenticatorEnabledAt { get; private set; }
+
+        public bool EmailTwoFactorEnabled { get; private set; }
+
         public static User Create(
             Guid id,
             string email,
@@ -227,6 +235,8 @@ namespace Domain.Entities.Users
 
             Email = normalizedEmail;
             EmailVerified = false;
+            EmailTwoFactorEnabled = false;
+            RevokeRefreshToken();
             UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -431,6 +441,54 @@ namespace Domain.Entities.Users
         {
             RefreshToken = null;
             RefreshTokenExpiryTime = null;
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        public void BeginAuthenticatorSetup(string protectedSecret)
+        {
+            EnsureCanBeModified();
+            ArgumentException.ThrowIfNullOrWhiteSpace(protectedSecret);
+            AuthenticatorSecretProtected = protectedSecret;
+            AuthenticatorEnabled = false;
+            AuthenticatorEnabledAt = null;
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        public void EnableAuthenticator()
+        {
+            EnsureCanBeModified();
+            if (string.IsNullOrWhiteSpace(AuthenticatorSecretProtected))
+                throw new UserDomainException("Authenticator setup has not been started.");
+            AuthenticatorEnabled = true;
+            AuthenticatorEnabledAt = DateTimeOffset.UtcNow;
+            RevokeRefreshToken();
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        public void DisableAuthenticator()
+        {
+            EnsureCanBeModified();
+            AuthenticatorEnabled = false;
+            AuthenticatorSecretProtected = null;
+            AuthenticatorEnabledAt = null;
+            RevokeRefreshToken();
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        public void EnableEmailTwoFactor()
+        {
+            EnsureCanBeModified();
+            VerifyEmail();
+            EmailTwoFactorEnabled = true;
+            RevokeRefreshToken();
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        public void DisableEmailTwoFactor()
+        {
+            EnsureCanBeModified();
+            EmailTwoFactorEnabled = false;
+            RevokeRefreshToken();
             UpdatedAt = DateTimeOffset.UtcNow;
         }
     }

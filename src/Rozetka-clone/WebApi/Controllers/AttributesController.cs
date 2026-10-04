@@ -1,10 +1,12 @@
-﻿using Application.Attributes;
+using Microsoft.AspNetCore.Authorization;
+using Application.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
     [Route("api/v1/attributes")]
     public sealed class AttributesController : ControllerBase
     {
@@ -16,6 +18,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<AttributeDto>>> GetByCategory(
             [FromQuery] Guid categoryId,
             CancellationToken cancellationToken)
@@ -28,6 +31,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{id:guid}")]
+        [AllowAnonymous]
         public async Task<ActionResult<AttributeDto>> GetById(
             Guid id,
             CancellationToken cancellationToken)
@@ -75,6 +79,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{attributeId:guid}/options")]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<AttributeOptionDto>>> GetOptions(
             Guid attributeId,
             CancellationToken cancellationToken)

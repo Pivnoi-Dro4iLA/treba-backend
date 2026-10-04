@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities.ProductTag;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -58,7 +59,7 @@ namespace Application.ProductTags
                 .AnyAsync(x => x.Slug == slug, cancellationToken);
 
             if (slugExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Product tag with this slug already exists.");
 
             var tag = new ProductTag
@@ -103,7 +104,7 @@ namespace Application.ProductTags
 
                 if (slugExists)
                 {
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         "Product tag with this slug already exists.");
                 }
 
@@ -165,7 +166,7 @@ namespace Application.ProductTags
                     cancellationToken);
 
             if (!productExists)
-                throw new InvalidOperationException("Product not found.");
+                throw new BusinessRuleException("Product not found.");
 
             var tagExists = await _dbContext.ProductTags
                 .AnyAsync(
@@ -173,7 +174,7 @@ namespace Application.ProductTags
                     cancellationToken);
 
             if (!tagExists)
-                throw new InvalidOperationException("Product tag not found.");
+                throw new BusinessRuleException("Product tag not found.");
 
             var relationExists = await _dbContext.ProductTagRelations
                 .AnyAsync(

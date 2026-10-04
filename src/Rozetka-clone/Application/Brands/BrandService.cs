@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -70,7 +71,7 @@ namespace Application.Brands
                 .AnyAsync(x => x.Slug == slug, cancellationToken);
 
             if (slugExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Brand with slug '{slug}' already exists.");
 
             var brand = new Brand
@@ -128,7 +129,7 @@ namespace Application.Brands
                         cancellationToken);
 
                 if (slugExists)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Brand with slug '{slug}' already exists.");
 
                 brand.Slug = slug;

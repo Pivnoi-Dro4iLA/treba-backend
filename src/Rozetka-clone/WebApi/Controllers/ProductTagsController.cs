@@ -1,9 +1,11 @@
-﻿using Application.ProductTags;
+using Microsoft.AspNetCore.Authorization;
+using Application.ProductTags;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
     [Route("api/v1/product-tags")]
     public sealed class ProductTagsController : ControllerBase
     {
@@ -15,6 +17,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<ProductTagDto>>> GetAll(
             CancellationToken cancellationToken)
         {
@@ -24,6 +27,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{tagId:guid}")]
+        [AllowAnonymous]
         public async Task<ActionResult<ProductTagDto>> GetById(
             Guid tagId,
             CancellationToken cancellationToken)
@@ -86,6 +90,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("/api/v1/products/{productId:guid}/tags")]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<ProductTagDto>>> GetProductTags(
             Guid productId,
             CancellationToken cancellationToken)

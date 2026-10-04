@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Application.Abstractions;
 using Contracts.Admin.Users;
 using Contracts.Common;
@@ -9,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace WebApi.Controllers;
 
 [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
 [Route("api/v1/admin/users")]
 public sealed class AdminUsersController : ControllerBase
 {
@@ -73,6 +75,8 @@ public sealed class AdminUsersController : ControllerBase
             request.LastName,
             request.MiddleName);
 
+        var customerRole = await _dbContext.Roles.SingleAsync(role => role.Name == Roles.Customer, cancellationToken);
+        user.AssignRole(customerRole.Id);
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -221,6 +225,9 @@ public sealed class AdminUsersController : ControllerBase
         {
             return NotFound();
         }
+
+        if (user.Id.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)
+            return Conflict(new ProblemDetails { Status = 409, Title = "You cannot change your own account status." });
 
         changeStatus(user);
         await _dbContext.SaveChangesAsync(cancellationToken);

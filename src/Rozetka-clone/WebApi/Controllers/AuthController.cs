@@ -10,10 +10,12 @@ namespace WebApi.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly IIdentityService _identityService;
+    private readonly ISecondFactorService _secondFactorService;
 
-    public AuthController(IIdentityService identityService)
+    public AuthController(IIdentityService identityService, ISecondFactorService secondFactorService)
     {
         _identityService = identityService;
+        _secondFactorService = secondFactorService;
     }
 
     [HttpPost("register")]
@@ -35,9 +37,48 @@ public sealed class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("login")]
+    [HttpPost("2fa/email/send")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SendEmailCode(
+        [FromBody] SendEmailLoginCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _secondFactorService.SendLoginEmailCodeAsync(request.ChallengeId, cancellationToken);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("2fa/verify")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> VerifySecondFactor(
+        [FromBody] VerifyLoginSecondFactorRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _identityService.CompleteSecondFactorLoginAsync(request, cancellationToken));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login(
