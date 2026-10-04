@@ -1,5 +1,5 @@
+using System.ComponentModel.DataAnnotations;
 namespace Contracts.Authentication;
-
 public sealed record LoginRequest(
-    string Email,
-    string Password);
+    [Required, EmailAddress, StringLength(320)] string Email,
+    [Required, StringLength(72)] string Password);

@@ -1,10 +1,12 @@
-﻿using Application.ProductVariants;
+using Microsoft.AspNetCore.Authorization;
+using Application.ProductVariants;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
     [Route("api/v1/products/{productId:guid}/variants")]
     public sealed class ProductVariantsController : ControllerBase
     {

@@ -18,6 +18,8 @@ namespace Application.Abstractions
 
         DbSet<Role> Roles { get; }
 
+        DbSet<AuthenticationChallenge> AuthenticationChallenges { get; }
+
         DbSet<Permission> Permissions { get; }
 
         DbSet<Product> Products { get; }

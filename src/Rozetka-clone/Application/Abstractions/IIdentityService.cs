@@ -11,8 +11,12 @@ public interface IIdentityService
         RegisterRequest request, 
         CancellationToken cancellationToken = default);
 
-    Task<AuthResponse> LoginAsync(
+    Task<LoginResponse> LoginAsync(
         LoginRequest request, 
+        CancellationToken cancellationToken = default);
+
+    Task<AuthResponse> CompleteSecondFactorLoginAsync(
+        VerifyLoginSecondFactorRequest request,
         CancellationToken cancellationToken = default);
 
     Task<AuthResponse> RefreshTokenAsync(

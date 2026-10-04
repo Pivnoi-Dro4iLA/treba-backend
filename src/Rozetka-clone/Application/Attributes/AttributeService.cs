@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities.Attribute;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -82,7 +83,7 @@ namespace Application.Attributes
                     cancellationToken);
 
             if (!categoryExists)
-                throw new InvalidOperationException("Category not found.");
+                throw new BusinessRuleException("Category not found.");
 
             var codeExists = await _dbContext.Attributes
                 .AnyAsync(
@@ -90,7 +91,7 @@ namespace Application.Attributes
                     cancellationToken);
 
             if (codeExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Attribute with code '{code}' already exists.");
 
             var attribute = new DomainAttribute(
@@ -149,7 +150,7 @@ namespace Application.Attributes
                         cancellationToken);
 
                 if (codeExists)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Attribute with code '{code}' already exists.");
             }
 
@@ -202,12 +203,12 @@ namespace Application.Attributes
                     cancellationToken);
 
             if (attribute is null)
-                throw new InvalidOperationException("Attribute not found.");
+                throw new BusinessRuleException("Attribute not found.");
 
             if (attribute.Type is not AttributeType.SELECT
                 and not AttributeType.MULTI_SELECT)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Options can only be added to SELECT or MULTI_SELECT attributes.");
             }
 
@@ -224,7 +225,7 @@ namespace Application.Attributes
                     cancellationToken);
 
             if (valueExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Option '{value}' already exists for this attribute.");
 
             var option = new AttributeOption
@@ -274,7 +275,7 @@ namespace Application.Attributes
                         cancellationToken);
 
                 if (valueExists)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Option '{value}' already exists for this attribute.");
 
                 option.Value = value;

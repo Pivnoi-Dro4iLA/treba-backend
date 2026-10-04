@@ -9,15 +9,22 @@ public sealed class IdentityService : IIdentityService
 {
     private readonly IApplicationDbContext _context;
     private readonly ITokenService _tokenService;
+    private readonly ISecondFactorService _secondFactorService;
 
-    public IdentityService(IApplicationDbContext context, ITokenService tokenService)
+    public IdentityService(
+        IApplicationDbContext context,
+        ITokenService tokenService,
+        ISecondFactorService secondFactorService)
     {
         _context = context;
         _tokenService = tokenService;
+        _secondFactorService = secondFactorService;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
+        if (!string.IsNullOrWhiteSpace(request.RoleName) && request.RoleName != Roles.Customer)
+            throw new InvalidOperationException("Public registration only supports the Customer role.");
         var emailNormalized = request.Email.Trim().ToLowerInvariant();
 
         var existingUser = await _context.Users
@@ -28,7 +35,7 @@ public sealed class IdentityService : IIdentityService
             throw new InvalidOperationException($"Пользователь с email '{request.Email}' уже существует.");
         }
 
-        var targetRoleName = string.IsNullOrWhiteSpace(request.RoleName) ? Roles.Customer : request.RoleName;
+        var targetRoleName = Roles.Customer;
         var role = await _context.Roles
             .FirstOrDefaultAsync(r => r.Name == targetRoleName, cancellationToken)
             ?? throw new InvalidOperationException($"Роль '{targetRoleName}' не найдена в системе.");
@@ -69,7 +76,7 @@ public sealed class IdentityService : IIdentityService
             expiresAt);
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var emailNormalized = request.Email.Trim().ToLowerInvariant();
 
@@ -77,7 +84,7 @@ public sealed class IdentityService : IIdentityService
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email == emailNormalized, cancellationToken);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (user is null || string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             throw new UnauthorizedAccessException("Неверный email или пароль.");
         }
@@ -87,28 +94,19 @@ public sealed class IdentityService : IIdentityService
             throw new InvalidOperationException("Учетная запись заблокирована или удалена.");
         }
 
-        user.RegisterLogin();
+        var challenge = await _secondFactorService.CreateLoginChallengeAsync(user, cancellationToken);
+        if (challenge is not null)
+            return new LoginResponse(null, challenge);
 
-        var roleName = user.Role?.Name ?? Roles.Customer;
+        return new LoginResponse(await IssueLoginTokensAsync(user, cancellationToken), null);
+    }
 
-        var refreshToken = _tokenService.GenerateRefreshToken();
-        var refreshTokenExpiry = DateTimeOffset.UtcNow.AddDays(7);
-        user.SetRefreshToken(refreshToken, refreshTokenExpiry);
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var accessToken = _tokenService.GenerateAccessToken(user, roleName);
-        var expiresAt = _tokenService.GetAccessTokenExpiration();
-
-        return new AuthResponse(
-            user.Id,
-            user.Email,
-            user.FirstName,
-            user.LastName,
-            roleName,
-            accessToken,
-            refreshToken,
-            expiresAt);
+    public async Task<AuthResponse> CompleteSecondFactorLoginAsync(
+        VerifyLoginSecondFactorRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _secondFactorService.VerifyLoginChallengeAsync(request, cancellationToken);
+        return await IssueLoginTokensAsync(user, cancellationToken);
     }
 
     public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
@@ -117,7 +115,8 @@ public sealed class IdentityService : IIdentityService
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken, cancellationToken);
 
-        if (user is null || user.RefreshTokenExpiryTime <= DateTimeOffset.UtcNow)
+        if (user is null || user.RefreshTokenExpiryTime is null || user.RefreshTokenExpiryTime <= DateTimeOffset.UtcNow
+            || user.Status is UserStatus.Blocked or UserStatus.Deleted)
         {
             throw new UnauthorizedAccessException("Недействительный или просроченный refresh token.");
         }
@@ -225,5 +224,23 @@ public sealed class IdentityService : IIdentityService
 
         user.AssignRole(dbRole.Id);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<AuthResponse> IssueLoginTokensAsync(User user, CancellationToken cancellationToken)
+    {
+        user.RegisterLogin();
+        var roleName = user.Role?.Name ?? Roles.Customer;
+        var refreshToken = _tokenService.GenerateRefreshToken();
+        user.SetRefreshToken(refreshToken, DateTimeOffset.UtcNow.AddDays(7));
+        await _context.SaveChangesAsync(cancellationToken);
+        return new AuthResponse(
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            roleName,
+            _tokenService.GenerateAccessToken(user, roleName),
+            refreshToken,
+            _tokenService.GetAccessTokenExpiration());
     }
 }

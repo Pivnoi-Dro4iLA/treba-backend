@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities.Product;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,9 @@ namespace Application.Products
         {
             return await _dbContext.Products
                 .AsNoTracking()
-                .Where(x => x.Status == ProductStatus.ACTIVE)
+                .Where(x => x.Status == ProductStatus.ACTIVE
+                    && _dbContext.Categories.Any(c => c.Id == x.CategoryId && c.IsActive)
+                    && _dbContext.Brands.Any(b => b.Id == x.BrandId && b.IsActive))
                 .OrderByDescending(x => x.CreatedAt)
                 .Select(x => ToDto(x))
                 .ToListAsync(cancellationToken);
@@ -36,7 +39,9 @@ namespace Application.Products
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
                     x => x.Slug == slug &&
-                         x.Status == ProductStatus.ACTIVE,
+                         x.Status == ProductStatus.ACTIVE
+                         && _dbContext.Categories.Any(c => c.Id == x.CategoryId && c.IsActive)
+                         && _dbContext.Brands.Any(b => b.Id == x.BrandId && b.IsActive),
                     cancellationToken);
 
             return product is null
@@ -50,12 +55,12 @@ namespace Application.Products
         {
             var slugExists = await _dbContext.Products
                 .AnyAsync(
-                    x => x.Slug == request.Slug,
+                    x => x.Slug == request.Slug.Trim().ToLowerInvariant(),
                     cancellationToken);
 
             if (slugExists)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Product with slug '{request.Slug}' already exists.");
             }
 
@@ -105,6 +110,9 @@ namespace Application.Products
             if (product is null)
                 return null;
 
+            if (product.Status is ProductStatus.PENDING_MODERATION or ProductStatus.ARCHIVED)
+                throw new BusinessRuleException("A product under review or archived cannot be edited.");
+
             if (request.CategoryId.HasValue)
                 product.CategoryId = request.CategoryId.Value;
 
@@ -125,7 +133,7 @@ namespace Application.Products
 
                 if (exists)
                 {
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Product with slug '{slug}' already exists.");
                 }
 
@@ -144,6 +152,7 @@ namespace Application.Products
             if (request.CountryOfOrigin is not null)
                 product.CountryOfOrigin = request.CountryOfOrigin.Trim();
 
+            product.Status = ProductStatus.DRAFT;
             product.UpdatedAt = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -163,10 +172,19 @@ namespace Application.Products
             if (product.Status != ProductStatus.DRAFT &&
                 product.Status != ProductStatus.REJECTED)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Only draft or rejected product can be submitted for moderation.");
             }
 
+            var variants = await _dbContext.ProductVariants.AsNoTracking()
+                .Where(v => v.ProductId == id && v.IsActive)
+                .Select(v => v.Price).ToListAsync(cancellationToken);
+            if (!variants.Any(price => price > 0))
+                throw new BusinessRuleException("Add an active variant with a positive price before submitting.");
+            if (!await _dbContext.Categories.AnyAsync(c => c.Id == product.CategoryId && c.IsActive, cancellationToken))
+                throw new BusinessRuleException("Product category must be active.");
+            if (!await _dbContext.Brands.AnyAsync(b => b.Id == product.BrandId && b.IsActive, cancellationToken))
+                throw new BusinessRuleException("Product brand must be active.");
             product.Status = ProductStatus.PENDING_MODERATION;
             product.UpdatedAt = DateTime.UtcNow;
 
@@ -186,7 +204,7 @@ namespace Application.Products
 
             if (product.Status != ProductStatus.PENDING_MODERATION)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Product must be pending moderation.");
             }
 
@@ -209,7 +227,7 @@ namespace Application.Products
 
             if (product.Status != ProductStatus.PENDING_MODERATION)
             {
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Product must be pending moderation.");
             }
 

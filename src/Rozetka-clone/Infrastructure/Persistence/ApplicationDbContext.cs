@@ -27,6 +27,8 @@ namespace Infrastructure.Persistence
 
         public DbSet<Role> Roles => Set<Role>();
 
+        public DbSet<AuthenticationChallenge> AuthenticationChallenges => Set<AuthenticationChallenge>();
+
         public DbSet<Permission> Permissions => Set<Permission>();
 
         // Products

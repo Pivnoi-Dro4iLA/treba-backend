@@ -1,4 +1,5 @@
 @page "/"
+@inject AdminPanel.Services.Implementations.CatalogApiClient CatalogApi
 
 <PageTitle>@L["Dashboard"] — Treba Admin</PageTitle>
 
@@ -27,10 +28,26 @@
         <div class="stat-icon icon-green"><i class="bi bi-people"></i></div>
     </article>
     <article class="stat-card">
-        <div class="stat-info"><p class="stat-title">@L["InModeration"]</p><p class="stat-value">47</p><p class="stat-trend trend-warning"><i class="bi bi-clock"></i> @L["NeedsAttention"]</p></div>
+        <div class="stat-info"><p class="stat-title">@L["InModeration"]</p><p class="stat-value">@(_stats?.Pending.ToString() ?? "—")</p><p class="stat-trend trend-warning"><i class="bi bi-clock"></i> @L["NeedsAttention"]</p></div>
         <div class="stat-icon icon-amber"><i class="bi bi-shield-check"></i></div>
     </article>
 </section>
+
+@code {
+    private Contracts.Catalog.CatalogStatsDto? _stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _stats = await CatalogApi.Stats();
+        }
+        catch (HttpRequestException)
+        {
+            _stats = null;
+        }
+    }
+}
 
 <section class="section-grid">
     <article class="card-box">

@@ -1,10 +1,12 @@
-﻿using Application.Brands;
+using Microsoft.AspNetCore.Authorization;
+using Application.Brands;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
     [Route("api/v1/brands")]
     public sealed class BrandsController : ControllerBase
     {
@@ -16,6 +18,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<BrandDto>>> GetAll(
             CancellationToken cancellationToken)
         {
@@ -25,6 +28,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{id:guid}")]
+        [AllowAnonymous]
         public async Task<ActionResult<BrandDto>> GetById(
             Guid id,
             CancellationToken cancellationToken)

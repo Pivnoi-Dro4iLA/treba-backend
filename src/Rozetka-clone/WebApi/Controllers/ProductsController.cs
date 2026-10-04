@@ -1,9 +1,11 @@
-﻿using Application.Products;
+using Microsoft.AspNetCore.Authorization;
+using Application.Products;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Roles = Domain.Entities.Users.Roles.Administrator)]
     public sealed class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -14,6 +16,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("/api/v1/products")]
+        [AllowAnonymous]
         public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetProducts(
             CancellationToken cancellationToken)
         {
@@ -24,6 +27,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("/api/v1/products/{slug}")]
+        [AllowAnonymous]
         public async Task<ActionResult<ProductDto>> GetProductBySlug(
             string slug,
             CancellationToken cancellationToken)

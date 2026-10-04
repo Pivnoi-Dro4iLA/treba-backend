@@ -1,4 +1,5 @@
-﻿using Application.Abstractions;
+using Application.Common;
+using Application.Abstractions;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -80,7 +81,7 @@ namespace Application.Categories
                 .AnyAsync(x => x.Slug == slug, cancellationToken);
 
             if (slugExists)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     $"Category with slug '{slug}' already exists.");
 
             var level = 0;
@@ -94,7 +95,7 @@ namespace Application.Categories
                         cancellationToken);
 
                 if (parent is null)
-                    throw new InvalidOperationException("Parent category not found.");
+                    throw new BusinessRuleException("Parent category not found.");
 
                 level = parent.Level + 1;
             }
@@ -153,7 +154,7 @@ namespace Application.Categories
                         cancellationToken);
 
                 if (slugExists)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         $"Category with slug '{slug}' already exists.");
 
                 category.Slug = slug;
@@ -190,7 +191,7 @@ namespace Application.Categories
                 return false;
 
             if (newParentId == categoryId)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Category cannot be its own parent.");
 
             Category? newParent = null;
@@ -201,11 +202,11 @@ namespace Application.Categories
                     x => x.Id == newParentId.Value);
 
                 if (newParent is null)
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         "Parent category not found.");
 
                 if (IsDescendant(categories, categoryId, newParent.Id))
-                    throw new InvalidOperationException(
+                    throw new BusinessRuleException(
                         "Category cannot be moved into its own descendant.");
             }
 
